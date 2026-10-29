@@ -1,0 +1,22 @@
+{
+  "KEYBIND_OPEN": "Show the scoreboard (hold)",
+  "UI_PLAYERS": "Players online",
+  "UI_CITIZEN": "Citizen",
+  "ADMIN_TITLE": "Scoreboard",
+  "ADMIN_TAB_SETTINGS": "Scoreboard",
+  "ADMIN_TAB_SETTINGS_DESC": "What players see while holding the scoreboard key.",
+  "ADMIN_C_PLAYERS": "Players",
+  "ADMIN_C_PLAYERS_DESC": "Player ids help reports; names are often hidden on roleplay servers.",
+  "ADMIN_F_IDS": "Show ids",
+  "ADMIN_H_IDS": "The server id of each player.",
+  "ADMIN_F_NAMES": "Show names",
+  "ADMIN_H_NAMES": "Character names of everyone online.",
+  "ADMIN_C_JOBS": "Job counts",
+  "ADMIN_C_JOBS_DESC": "How many members of these jobs are on duty.",
+  "ADMIN_F_JOBS": "Jobs",
+  "ADMIN_ADD_JOB": "Add job",
+  "ADMIN_F_JOB": "Job",
+  "ADMIN_P_JOB": "police",
+  "ADMIN_F_JOB_LABEL": "Shown as",
+  "ADMIN_P_JOB_LABEL": "Police"
+}

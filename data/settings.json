@@ -1,0 +1,22 @@
+{
+  "showNames": false,
+  "showIds": true,
+  "jobs": [
+    {
+      "job": "police",
+      "label": "Police"
+    },
+    {
+      "job": "ambulance",
+      "label": "EMS"
+    },
+    {
+      "job": "mechanic",
+      "label": "Mechanics"
+    },
+    {
+      "job": "taxi",
+      "label": "Taxi"
+    }
+  ]
+}
