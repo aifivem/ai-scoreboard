@@ -1,5 +1,6 @@
 import {
   AdminPanel,
+  every,
   onCharacter,
   onClientCallback,
   online,
@@ -55,22 +56,39 @@ class Roster {
     this.remove(source);
     const row = this.row(source, character);
     this.rows.set(source, row);
-    this.send(EVENTS.put, row);
+    this.puts.set(row.key, row);
+    this.flushJob.set(true);
   }
 
   remove(source: number): void {
     const row = this.rows.get(source);
     if (!row) return;
     this.rows.delete(source);
-    this.send(EVENTS.remove, row.key);
+    // A row that came and went inside one window never reaches anyone.
+    if (!this.puts.delete(row.key)) this.removes.add(row.key);
+    this.flushJob.set(true);
   }
 
-  private send(event: string, payload: unknown): void {
+  /** Joins and leaves of the last second go to every subscriber as one event (a refill is not N x N events). */
+  private readonly puts = new Map<number, Row>();
+  private readonly removes = new Set<number>();
+  private readonly flushJob = every(1000, () => this.flush(), {
+    active: false,
+    name: "roster flush",
+  });
+
+  private flush(): void {
+    this.flushJob.set(false);
+    const puts = [...this.puts.values()];
+    const removes = [...this.removes];
+    this.puts.clear();
+    this.removes.clear();
     const s = settings.value;
     if (!s.showIds && !s.showNames) return;
+    if (!puts.length && !removes.length) return;
     this.seq++;
     for (const watcher of this.watchers.keys())
-      emitNet(event, watcher, this.seq, payload);
+      emitNet(EVENTS.changes, watcher, this.seq, puts, removes);
   }
 }
 

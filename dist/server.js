@@ -195,6 +195,8 @@ const CORE = {
 	dutyChangedEvent: "ai-core:dutyChanged",
 	gangsChangedEvent: "ai-core:gangsChanged",
 	activeGangChangedEvent: "ai-core:activeGangChanged",
+	metaChangedEvent: "ai-core:metaChanged",
+	definitionsChangedEvent: "ai-core:definitionsChanged",
 	characterScreenEvent: "ai-core:characterScreen",
 	inventoryChangedEvent: "ai-core:inventoryChanged",
 	itemUsedEvent: "ai-core:itemUsed",
@@ -206,6 +208,9 @@ const CORE = {
 	clientPromptPressedEvent: "ai-core:client:promptPressed",
 	clientCacheEvent: "ai-core:client:cache",
 	clientHudVisibleEvent: "ai-core:client:hudVisible",
+	clientWorldSyncEvent: "ai-core:client:worldSync",
+	clientCancelProgressEvent: "ai-core:client:cancelProgress",
+	clientDefinitionsEvent: "ai-core:client:definitions",
 	vehicleTypeCallback: "ai-core:vehicleType",
 	interactionStateKey: "ai:interaction",
 	charactersCallback: "ai-core:characters",
@@ -260,7 +265,7 @@ function loadLocaleTexts(resource = GetCurrentResourceName()) {
 // ../../../packages/lib/src/fivem/callbackNames.ts
 const requestEvent = (name) => `aicore:cb:${name}`, responseEvent = (resource) => `aicore:cbr:${resource}`;
 resourceExport(CORE.resource);
-const log$5 = createLogger(GetCurrentResourceName()), gates = new Set();
+const log$6 = createLogger(GetCurrentResourceName()), gates = new Set();
 on("playerDropped", () => {
 	let source = Number(globalThis.source);
 	for (let gate of gates) gate.release(source);
@@ -301,11 +306,11 @@ var ClientGate = class {
 		this.refusals.set(source, {
 			at: now,
 			skipped: 0
-		}), log$5.warn(`${this.name} refused for ${GetPlayerName(String(source))} (${source}): ${typeof reason == "string" ? reason : reason()}${more}`);
+		}), log$6.warn(`${this.name} refused for ${GetPlayerName(String(source))} (${source}): ${typeof reason == "string" ? reason : reason()}${more}`);
 	}
 };
 // ../../../packages/lib/src/server/callback.ts
-const log$4 = createLogger(GetCurrentResourceName()), resource$1 = GetCurrentResourceName(), REFUSED = Symbol("refused");
+const log$5 = createLogger(GetCurrentResourceName()), resource$1 = GetCurrentResourceName(), REFUSED = Symbol("refused");
 function onClientCallback(name, first, second) {
 	let [handler, options] = typeof first == "function" ? [first, second ?? {}] : [second, first], gate = new ClientGate(name, options, 20);
 	onNet(requestEvent(name), async (caller, id, ...raw) => {
@@ -317,7 +322,7 @@ function onClientCallback(name, first, second) {
 			let result = await gate.run(source, REFUSED, () => handler(source, ...args));
 			result === REFUSED ? emitNet(responseEvent(caller), source, id, !1, null) : emitNet(responseEvent(caller), source, id, !0, result ?? null);
 		} catch (error) {
-			log$4.error(`callback ${name} failed for ${source}`, error), emitNet(responseEvent(caller), source, id, !1, null);
+			log$5.error(`callback ${name} failed for ${source}`, error), emitNet(responseEvent(caller), source, id, !1, null);
 		}
 	});
 }
@@ -663,7 +668,10 @@ var AdminPanel = class {
 	constructor(schema) {
 		this.schema = schema;
 		for (let [name, spec] of Object.entries(schema.files)) this.load(name, spec);
-		registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges)), setImmediate(() => core$13.RegisterAdminPanel(this.resource));
+		registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges), { rate: {
+			count: 4,
+			windowMs: 1e4
+		} }), setImmediate(() => core$13.RegisterAdminPanel(this.resource));
 	}
 	get(file) {
 		return this.data.get(file) ?? {};
@@ -886,7 +894,7 @@ var OnlinePlayers = class {
 const EMPTY = new Set(), online = new OnlinePlayers();
 resourceExport(CORE.resource), resourceExport(CORE.resource);
 // ../../../packages/lib/src/server/players.ts
-const log$3 = createLogger(GetCurrentResourceName()), dropped = new Set();
+const log$4 = createLogger(GetCurrentResourceName()), dropped = new Set();
 let listening = !1;
 function onDropped(fn) {
 	listening || (listening = !0, on("playerDropped", () => {
@@ -907,15 +915,15 @@ function onCharacter(handlers) {
 	let live = new Map(), deliver = (source, character) => {
 		if (live.set(source, character.id), handlers.loaded) try {
 			let result = handlers.loaded(source, character);
-			result instanceof Promise && result.catch((error) => log$3.error(`character loaded handler failed for ${source}`, error));
+			result instanceof Promise && result.catch((error) => log$4.error(`character loaded handler failed for ${source}`, error));
 		} catch (error) {
-			log$3.error(`character loaded handler failed for ${source}`, error);
+			log$4.error(`character loaded handler failed for ${source}`, error);
 		}
 	}, end = (source, charId) => {
 		if (live.delete(source)) try {
 			handlers.unloaded?.(source, charId);
 		} catch (error) {
-			log$3.error(`character unloaded handler failed for ${source}`, error);
+			log$4.error(`character unloaded handler failed for ${source}`, error);
 		}
 	};
 	on(CORE.playerLoadedEvent, (source, character) => {
@@ -960,8 +968,47 @@ createLogger(resource), new class {
 		});
 	}
 }(), createLogger(GetCurrentResourceName()), createLogger("aicore-lib");
-// ../../../packages/lib/src/fivem/scheduler.ts
-var Group = class {
+let log = null;
+var ScheduledJob = class {
+	interval;
+	fn;
+	name;
+	gen = 0;
+	active = !1;
+	stopped = !1;
+	quietUntil = 0;
+	skipped = 0;
+	constructor(interval, fn, name) {
+		this.interval = interval, this.fn = fn, this.name = name;
+	}
+	get running() {
+		return this.active;
+	}
+	set(active) {
+		active === this.active || active && this.stopped || (this.active = active, active ? scheduler.activate(this) : scheduler.deactivate(this));
+	}
+	stop() {
+		this.set(!1), this.stopped = !0;
+	}
+	call() {
+		try {
+			let result = this.fn();
+			result instanceof Promise && result.catch((error) => this.fail(error));
+		} catch (error) {
+			this.fail(error);
+		}
+	}
+	fail(error) {
+		let now = GetGameTimer();
+		if (now < this.quietUntil) {
+			this.skipped++;
+			return;
+		}
+		this.quietUntil = now + 1e4;
+		let more = this.skipped ? ` (+${this.skipped} more)` : "";
+		this.skipped = 0, log ??= createLogger(GetCurrentResourceName()), log.error(`job "${this.name}" failed${more}`, error instanceof Error ? error.stack ?? error.message : error);
+	}
+}, Group = class {
 	interval;
 	jobs = Array(8);
 	gens = Array(8).fill(0);
@@ -999,7 +1046,7 @@ var Group = class {
 		this.jobs = jobs, this.gens = gens, this.dues = dues, this.head = 0, this.mask = size - 1;
 	}
 };
-new class {
+const scheduler = new class {
 	groups = [];
 	byInterval = new Map();
 	tick = null;
@@ -1034,14 +1081,18 @@ new class {
 		}
 		groups.length = kept, this.nextDue = soonest;
 	};
-}(), IsDuplicityVersion(), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource);
+}();
+function every(ms, fn, options = {}) {
+	let job = new ScheduledJob(Math.max(0, Math.floor(ms)), fn, options.name ?? (fn.name || "anonymous"));
+	return options.active !== !1 && job.set(!0), job;
+}
+IsDuplicityVersion(), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource);
 // resource/common/board.ts
 const EVENTS = {
 	board: "ai-scoreboard:board",
 	subscribe: "ai-scoreboard:subscribe",
 	roster: "ai-scoreboard:client:roster",
-	put: "ai-scoreboard:client:put",
-	remove: "ai-scoreboard:client:remove"
+	changes: "ai-scoreboard:client:changes"
 };
 function readSettings(raw) {
 	let s = record(raw), jobs = Array.isArray(s.jobs) ? s.jobs.flatMap((row) => {
@@ -1190,17 +1241,26 @@ const panel = new AdminPanel({
 	put(source, character) {
 		this.remove(source);
 		let row = this.row(source, character);
-		this.rows.set(source, row), this.send(EVENTS.put, row);
+		this.rows.set(source, row), this.puts.set(row.key, row), this.flushJob.set(!0);
 	}
 	remove(source) {
 		let row = this.rows.get(source);
-		row && (this.rows.delete(source), this.send(EVENTS.remove, row.key));
+		row && (this.rows.delete(source), this.puts.delete(row.key) || this.removes.add(row.key), this.flushJob.set(!0));
 	}
-	send(event, payload) {
+	puts = new Map();
+	removes = new Set();
+	flushJob = every(1e3, () => this.flush(), {
+		active: !1,
+		name: "roster flush"
+	});
+	flush() {
+		this.flushJob.set(!1);
+		let puts = [...this.puts.values()], removes = [...this.removes];
+		this.puts.clear(), this.removes.clear();
 		let s = settings.value;
-		if (s.showIds || s.showNames) {
+		if ((s.showIds || s.showNames) && (puts.length || removes.length)) {
 			this.seq++;
-			for (let watcher of this.watchers.keys()) emitNet(event, watcher, this.seq, payload);
+			for (let watcher of this.watchers.keys()) emitNet(EVENTS.changes, watcher, this.seq, puts, removes);
 		}
 	}
 }();

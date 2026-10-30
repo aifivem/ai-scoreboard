@@ -5,14 +5,12 @@ import { bool, record, str } from "@aicore-fivem/lib/shared";
 export const EVENTS = {
   /** Callback: () -> Counts, the numbers the scoreboard shows right now (asked when the key is pressed). */
   board: "ai-scoreboard:board",
-  /** Callback: () -> { ok } subscribes to the player list: a `roster` snapshot follows (latent), then `put` / `remove`. */
+  /** Callback: () -> { ok } subscribes to the player list: a `roster` snapshot follows (latent), then `changes`. */
   subscribe: "ai-scoreboard:subscribe",
   /** Server -> subscriber (latent): (seq, rows: Row[]) the whole player list as of delta `seq`. */
   roster: "ai-scoreboard:client:roster",
-  /** Server -> subscribers: (seq, row: Row) a player joined (or changed). */
-  put: "ai-scoreboard:client:put",
-  /** Server -> subscribers: (seq, key) a player left. */
-  remove: "ai-scoreboard:client:remove",
+  /** Server -> subscribers, at most once a second: (seq, puts: Row[], removes: key[]) players who joined / left. */
+  changes: "ai-scoreboard:client:changes",
 } as const;
 
 /** One player row: `key` identifies the row, `id` is the shown server id (0 when ids are hidden). */

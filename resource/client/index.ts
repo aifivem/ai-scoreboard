@@ -42,7 +42,7 @@ function toCounts(v: unknown): Counts | null {
   };
 }
 
-type Delta = { seq: number; row: Row } | { seq: number; key: number };
+type Delta = { seq: number; puts: Row[]; removes: number[] };
 
 /**
  * The player list kept on this client: asked once (first open), then the server's `put` / `remove` deltas. Deltas
@@ -73,8 +73,8 @@ class Roster {
   }
 
   private apply(delta: Delta): void {
-    if ("row" in delta) this.rows?.set(delta.row.key, delta.row);
-    else this.rows?.delete(delta.key);
+    for (const key of delta.removes) this.rows?.delete(key);
+    for (const row of delta.puts) this.rows?.set(row.key, row);
   }
 
   /** Forgets the list (a settings change ended the server's subscription). */
@@ -107,24 +107,18 @@ onServerEvent(
   },
 );
 onServerEvent(
-  EVENTS.put,
+  EVENTS.changes,
   {
-    args: ([seq, raw]): [number, Row] | null => {
-      const row = toRow(raw);
-      return Number.isInteger(seq) && row ? [seq as number, row] : null;
-    },
+    args: ([seq, puts, removes]): [number, Row[], number[]] | null =>
+      Number.isInteger(seq) && Array.isArray(puts) && Array.isArray(removes)
+        ? [
+            seq as number,
+            puts.flatMap((r) => toRow(r) ?? []),
+            removes.flatMap((k) => readId(k) ?? []),
+          ]
+        : null,
   },
-  (seq, row) => roster.delta({ seq, row }),
-);
-onServerEvent(
-  EVENTS.remove,
-  {
-    args: ([seq, key]): [number, number] | null => {
-      const k = readId(key);
-      return Number.isInteger(seq) && k !== null ? [seq as number, k] : null;
-    },
-  },
-  (seq, key) => roster.delta({ seq, key }),
+  (seq, puts, removes) => roster.delta({ seq, puts, removes }),
 );
 
 /** Whether the board is open (or asked for); a press asks the counts once and shows them with the list. No focus. */
