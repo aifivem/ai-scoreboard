@@ -1,4 +1,4 @@
-import { AdminPanel, onClientCallback, resourceExport } from "@aicore-fivem/lib/server";
+import { AdminPanel, onClientCallback, online, resourceExport } from "@aicore-fivem/lib/server";
 import type { PanelSchema } from "@aicore-fivem/shared";
 import { EVENTS, readSettings, type Board } from "common/board";
 
@@ -69,10 +69,9 @@ onClientCallback(
   EVENTS.board,
   (): Board => {
     const s = content.settings;
-    const sources = core.GetLoadedSources();
     const players = s.showIds || s.showNames
-      ? sources.map((id) => {
-          const c = s.showNames ? core.GetCharacter(id) : null;
+      ? [...online.sources()].map((id) => {
+          const c = s.showNames ? online.character(id) : null;
           return { id: s.showIds ? id : 0, name: c ? `${c.firstname} ${c.lastname}` : "" };
         })
       : [];
