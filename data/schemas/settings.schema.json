@@ -15,6 +15,13 @@
       "description": "Show ids: The server id of each player.",
       "type": "boolean"
     },
+    "keyMode": {
+      "description": "Key works by: Hold: the board shows while the key is held. Press: one press opens it, the next press closes it.",
+      "enum": [
+        "hold",
+        "toggle"
+      ]
+    },
     "jobs": {
       "description": "Jobs",
       "type": "array",

@@ -9,7 +9,7 @@ import { EVENTS, readSettings, type Board } from "common/board";
 
 const core = resourceExport("ai-core");
 
-/** ai-scoreboard's panel: what players may see about each other and which job counts show. */
+/** ai-scoreboard's panel: how the key opens the board, what players may see about each other and which job counts show. */
 const schema: PanelSchema = {
   title: "ADMIN_TITLE",
   icon: "users",
@@ -20,6 +20,7 @@ const schema: PanelSchema = {
       sections: {
         showNames: { type: "bool" },
         showIds: { type: "bool" },
+        keyMode: { type: "enum", values: ["hold", "toggle"] },
         jobs: {
           type: "list",
           max: 12,
@@ -37,6 +38,7 @@ const schema: PanelSchema = {
           },
         },
       },
+      defaults: { keyMode: "hold" },
     },
   },
   tabs: [
@@ -47,6 +49,23 @@ const schema: PanelSchema = {
       label: "ADMIN_TAB_SETTINGS",
       desc: "ADMIN_TAB_SETTINGS_DESC",
       cards: [
+        {
+          icon: "keyboard",
+          title: "ADMIN_C_KEY",
+          desc: "ADMIN_C_KEY_DESC",
+          fields: [
+            {
+              widget: "select",
+              path: "keyMode",
+              label: "ADMIN_F_KEY_MODE",
+              hint: "ADMIN_H_KEY_MODE",
+              options: [
+                { value: "hold", label: "ADMIN_O_HOLD" },
+                { value: "toggle", label: "ADMIN_O_TOGGLE" },
+              ],
+            },
+          ],
+        },
         {
           icon: "users",
           title: "ADMIN_C_PLAYERS",

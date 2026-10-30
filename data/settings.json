@@ -19,5 +19,6 @@
       "job": "taxi",
       "label": "Taxi"
     }
-  ]
+  ],
+  "keyMode": "hold"
 }

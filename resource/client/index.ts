@@ -1,11 +1,24 @@
 import {
+  AdminWorld,
   Keybind,
   loadLocaleTexts,
   triggerServerCallback,
 } from "@aicore-fivem/lib/client";
 import { record } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
-import { EVENTS, type Board, type NuiMessage } from "common/board";
+import {
+  EVENTS,
+  readSettings,
+  type Board,
+  type NuiMessage,
+} from "common/board";
+
+const world = new AdminWorld(["settings"]);
+let settings = readSettings(world.get("settings"));
+world.onChange("settings", () => {
+  settings = readSettings(world.get("settings"));
+  close();
+});
 
 const texts = loadLocaleTexts();
 const send = (m: NuiMessage): void => SendNUIMessage(m);
@@ -37,23 +50,35 @@ function toBoard(v: unknown): Board | null {
   };
 }
 
-/** Held key: asks the server once per press and shows the board until the key is released. No focus. */
-let held = false;
+/** Whether the board is open (or asked for); a press asks the server once and shows it. No focus. */
+let open = false;
+
+function show(): void {
+  open = true;
+  void triggerServerCallback(EVENTS.board)
+    .then((raw) => {
+      const board = toBoard(raw);
+      if (board && open) send({ action: "open", data: { texts, board } });
+    })
+    .catch(() => undefined);
+}
+
+function close(): void {
+  if (!open) return;
+  open = false;
+  send({ action: "close", data: null });
+}
+
+// The key is set in ai-core's Keybinds tab; the panel's key mode decides hold or press to open and close.
 new Keybind({
   name: "scoreboard_open",
   description: Locale("KEYBIND_OPEN"),
   defaultKey: "HOME",
   onPressed: () => {
-    held = true;
-    void triggerServerCallback(EVENTS.board)
-      .then((raw) => {
-        const board = toBoard(raw);
-        if (board && held) send({ action: "open", data: { texts, board } });
-      })
-      .catch(() => undefined);
+    if (settings.keyMode === "toggle" && open) close();
+    else show();
   },
   onReleased: () => {
-    held = false;
-    send({ action: "close", data: null });
+    if (settings.keyMode === "hold") close();
   },
 });

@@ -1,10 +1,10 @@
 {
-  "KEYBIND_OPEN": "Show the scoreboard (hold)",
+  "KEYBIND_OPEN": "Show the scoreboard",
   "UI_PLAYERS": "Players online",
   "UI_CITIZEN": "Citizen",
   "ADMIN_TITLE": "Scoreboard",
   "ADMIN_TAB_SETTINGS": "Scoreboard",
-  "ADMIN_TAB_SETTINGS_DESC": "What players see while holding the scoreboard key.",
+  "ADMIN_TAB_SETTINGS_DESC": "How the scoreboard key works and what players see on the board.",
   "ADMIN_C_PLAYERS": "Players",
   "ADMIN_C_PLAYERS_DESC": "Player ids help reports; names are often hidden on roleplay servers.",
   "ADMIN_F_IDS": "Show ids",
@@ -18,5 +18,11 @@
   "ADMIN_F_JOB": "Job",
   "ADMIN_P_JOB": "police",
   "ADMIN_F_JOB_LABEL": "Shown as",
-  "ADMIN_P_JOB_LABEL": "Police"
+  "ADMIN_P_JOB_LABEL": "Police",
+  "ADMIN_C_KEY": "Key",
+  "ADMIN_C_KEY_DESC": "The key itself (HOME unless changed) is set in ai-core's Keybinds tab under \"Show the scoreboard\"; players can still rebind it in GTA Settings > Key Bindings > FiveM.",
+  "ADMIN_F_KEY_MODE": "Key works by",
+  "ADMIN_H_KEY_MODE": "Hold: the board shows while the key is held. Press: one press opens it, the next press closes it.",
+  "ADMIN_O_HOLD": "Holding it",
+  "ADMIN_O_TOGGLE": "Pressing to open and close"
 }

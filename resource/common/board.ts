@@ -11,6 +11,8 @@ export interface Settings {
   /** Show character names (otherwise only ids). */
   showNames: boolean;
   showIds: boolean;
+  /** "hold": shown while the key is held; "toggle": one press opens, the next closes. */
+  keyMode: "hold" | "toggle";
   /** Jobs whose on-duty counts show at the top. */
   jobs: Array<{ job: string; label: string }>;
 }
@@ -34,6 +36,7 @@ export function readSettings(raw: unknown): Settings {
   return {
     showNames: bool(s.showNames, false),
     showIds: bool(s.showIds, true),
+    keyMode: s.keyMode === "toggle" ? "toggle" : "hold",
     jobs,
   };
 }
