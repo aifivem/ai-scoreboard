@@ -1,6 +1,6 @@
 # ai-scoreboard
 
-Hold HOME: players online / max, on-duty counts of the panel's jobs, and the player list (ids and / or names when the panel allows). Depends on ai-core (characters, duty counts). Research: `docs/research/ai-scoreboard.md`.
+Hold HOME: players online / max, on-duty counts of the panel's jobs, and the player list (ids and / or names when the panel allows). Depends on ai-core (characters, duty counts).
 
 ## Decisions
 
