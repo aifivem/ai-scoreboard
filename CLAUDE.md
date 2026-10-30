@@ -14,4 +14,4 @@ Hold HOME: players online / max, on-duty counts of the panel's jobs, and the pla
 
 ## Entry points
 
-- Server and panel schema `resource/server/index.ts`; client key `resource/client/index.ts`; NUI `web/src/App.tsx`.
+- Server and panel schema `resource/server/index.ts`; client key `resource/client/index.ts`; NUI `web/src/App.tsx` (tgiann-esc look; preview `bun run webdev`, `?names=1`).
