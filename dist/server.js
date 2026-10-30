@@ -202,7 +202,7 @@ const CORE = {
 	clientPlayerLoadedEvent: "ai-core:client:playerLoaded",
 	clientPlayerUnloadedEvent: "ai-core:client:playerUnloaded",
 	clientCharacterPortraitEvent: "ai-core:client:characterPortrait",
-	clientCharacterLookEvent: "ai-core:client:characterLook",
+	characterLooksEvent: "ai-core:client:characterLooks",
 	clientPromptPressedEvent: "ai-core:client:promptPressed",
 	clientCacheEvent: "ai-core:client:cache",
 	clientHudVisibleEvent: "ai-core:client:hudVisible",
@@ -829,7 +829,54 @@ var OnlinePlayers = class {
 	}
 };
 const EMPTY = new Set(), online = new OnlinePlayers();
-resourceExport(CORE.resource), resourceExport(CORE.resource), createLogger(GetCurrentResourceName());
+resourceExport(CORE.resource), resourceExport(CORE.resource);
+// ../../../packages/lib/src/server/players.ts
+const log$3 = createLogger(GetCurrentResourceName()), dropped = new Set();
+let listening = !1;
+function onDropped(fn) {
+	listening || (listening = !0, on("playerDropped", () => {
+		let source = Number(globalThis.source);
+		for (let handler of dropped) handler(source);
+	})), dropped.add(fn);
+}
+var PlayerMap = class extends Map {
+	constructor(options = {}) {
+		super(), onDropped((source) => {
+			if (!this.has(source)) return;
+			let value = this.get(source);
+			this.delete(source), options.onDrop?.(source, value);
+		});
+	}
+};
+function onCharacter(handlers) {
+	let live = new Map(), deliver = (source, character) => {
+		if (live.set(source, character.id), handlers.loaded) try {
+			let result = handlers.loaded(source, character);
+			result instanceof Promise && result.catch((error) => log$3.error(`character loaded handler failed for ${source}`, error));
+		} catch (error) {
+			log$3.error(`character loaded handler failed for ${source}`, error);
+		}
+	}, end = (source, charId) => {
+		if (live.delete(source)) try {
+			handlers.unloaded?.(source, charId);
+		} catch (error) {
+			log$3.error(`character unloaded handler failed for ${source}`, error);
+		}
+	};
+	on(CORE.playerLoadedEvent, (source, character) => {
+		let previous = live.get(source);
+		previous !== void 0 && end(source, previous), deliver(source, character);
+	}), on(CORE.playerUnloadedEvent, (source, charId) => end(source, charId)), onDropped((source) => setImmediate(() => {
+		let charId = live.get(source);
+		charId !== void 0 && end(source, charId);
+	})), setImmediate(() => {
+		for (let source of online.sources()) {
+			if (live.has(source)) continue;
+			let character = online.character(source);
+			character && deliver(source, character);
+		}
+	});
+}
 // ../../../packages/lib/src/server/command.ts
 const resource = GetCurrentResourceName();
 createLogger(resource), new class {
@@ -857,9 +904,15 @@ createLogger(resource), new class {
 			if (name === resource) for (let command of this.list) for (let n of command.info.names) emitNet("chat:removeSuggestion", -1, `/${n}`);
 		});
 	}
-}(), createLogger(GetCurrentResourceName()), createLogger("aicore-lib"), IsDuplicityVersion(), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource);
+}(), createLogger(GetCurrentResourceName()), createLogger("aicore-lib"), IsDuplicityVersion(), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource);
 // resource/common/board.ts
-const EVENTS = { board: "ai-scoreboard:board" };
+const EVENTS = {
+	board: "ai-scoreboard:board",
+	subscribe: "ai-scoreboard:subscribe",
+	roster: "ai-scoreboard:client:roster",
+	put: "ai-scoreboard:client:put",
+	remove: "ai-scoreboard:client:remove"
+};
 function readSettings(raw) {
 	let s = record(raw), jobs = Array.isArray(s.jobs) ? s.jobs.flatMap((row) => {
 		let r = record(row), job = str(r.job, "", 32);
@@ -876,7 +929,7 @@ function readSettings(raw) {
 	};
 }
 // resource/server/index.ts
-const core = resourceExport("ai-core"), panel = new AdminPanel({
+const panel = new AdminPanel({
 	title: "ADMIN_TITLE",
 	icon: "users",
 	files: { settings: {
@@ -982,25 +1035,59 @@ const core = resourceExport("ai-core"), panel = new AdminPanel({
 			}
 		]
 	}]
-}), content = { settings: readSettings(panel.get("settings")) };
-panel.onChange("settings", () => content.settings = readSettings(panel.get("settings"))), onClientCallback(EVENTS.board, () => {
-	let s = content.settings, players = s.showIds || s.showNames ? [...online.sources()].map((id) => {
-		let c = s.showNames ? online.character(id) : null;
-		return {
-			id: s.showIds ? id : 0,
-			name: c ? `${c.firstname} ${c.lastname}` : ""
+}), settings = panel.view("settings", readSettings), roster = new class {
+	rows = new Map();
+	watchers = new PlayerMap();
+	nextKey = 0;
+	seq = 0;
+	row(source, character) {
+		let s = settings.value;
+		return this.nextKey = this.nextKey >= 2147483647 ? 1 : this.nextKey + 1, {
+			key: this.nextKey,
+			id: s.showIds ? source : 0,
+			name: s.showNames && character ? `${character.firstname} ${character.lastname}` : ""
 		};
-	}) : [];
-	return {
-		online: GetNumPlayerIndices(),
-		max: GetConvarInt("sv_maxclients", 48),
-		jobs: s.jobs.map((j) => ({
-			label: j.label,
-			count: core.GetOnDutyCount(j.job)
-		})),
-		players
-	};
-}, { rate: {
+	}
+	reset() {
+		this.watchers.clear(), this.rows.clear();
+		for (let source of online.sources()) this.rows.set(source, this.row(source, online.character(source)));
+	}
+	subscribe(source) {
+		this.watchers.set(source, !0);
+		let s = settings.value, rows = s.showIds || s.showNames ? [...this.rows.values()] : [];
+		TriggerLatentClientEvent(EVENTS.roster, source, 5e4, this.seq, rows);
+	}
+	put(source, character) {
+		this.remove(source);
+		let row = this.row(source, character);
+		this.rows.set(source, row), this.send(EVENTS.put, row);
+	}
+	remove(source) {
+		let row = this.rows.get(source);
+		row && (this.rows.delete(source), this.send(EVENTS.remove, row.key));
+	}
+	send(event, payload) {
+		let s = settings.value;
+		if (s.showIds || s.showNames) {
+			this.seq++;
+			for (let watcher of this.watchers.keys()) emitNet(event, watcher, this.seq, payload);
+		}
+	}
+}();
+roster.reset(), panel.onChange("settings", () => roster.reset()), onCharacter({
+	loaded: (source, character) => roster.put(source, character),
+	unloaded: (source) => roster.remove(source)
+}), onClientCallback(EVENTS.board, () => ({
+	online: GetNumPlayerIndices(),
+	max: GetConvarInt("sv_maxclients", 48),
+	jobs: settings.value.jobs.map((j) => ({
+		label: j.label,
+		count: online.onDutyFor(j.job).size
+	}))
+}), { rate: {
 	count: 2,
 	windowMs: 2e3
+} }), onClientCallback(EVENTS.subscribe, (source) => (roster.subscribe(source), { ok: !0 }), { rate: {
+	count: 1,
+	windowMs: 5e3
 } });

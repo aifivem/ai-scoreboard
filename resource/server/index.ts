@@ -1,155 +1,105 @@
 import {
   AdminPanel,
+  onCharacter,
   onClientCallback,
   online,
-  resourceExport,
+  PlayerMap,
 } from "@aicore-fivem/lib/server";
-import type { PanelSchema } from "@aicore-fivem/shared";
-import { EVENTS, readSettings, type Board } from "common/board";
-
-const core = resourceExport("ai-core");
-
-/** ai-scoreboard's panel: how the key opens the board, what players may see about each other and which job counts show. */
-const schema: PanelSchema = {
-  title: "ADMIN_TITLE",
-  icon: "users",
-  files: {
-    settings: {
-      kind: "settings",
-      sync: "all",
-      sections: {
-        showNames: { type: "bool" },
-        showIds: { type: "bool" },
-        keyMode: { type: "enum", values: ["hold", "toggle"] },
-        jobs: {
-          type: "list",
-          max: 12,
-          of: {
-            type: "object",
-            fields: {
-              job: {
-                type: "text",
-                min: 2,
-                max: 32,
-                pattern: "^[a-z0-9_]{2,32}$",
-              },
-              label: { type: "text", min: 1, max: 32 },
-            },
-          },
-        },
-      },
-      defaults: { keyMode: "hold" },
-    },
-  },
-  tabs: [
-    {
-      id: "settings",
-      file: "settings",
-      icon: "users",
-      label: "ADMIN_TAB_SETTINGS",
-      desc: "ADMIN_TAB_SETTINGS_DESC",
-      cards: [
-        {
-          icon: "keyboard",
-          title: "ADMIN_C_KEY",
-          desc: "ADMIN_C_KEY_DESC",
-          fields: [
-            {
-              widget: "select",
-              path: "keyMode",
-              label: "ADMIN_F_KEY_MODE",
-              hint: "ADMIN_H_KEY_MODE",
-              options: [
-                { value: "hold", label: "ADMIN_O_HOLD" },
-                { value: "toggle", label: "ADMIN_O_TOGGLE" },
-              ],
-            },
-          ],
-        },
-        {
-          icon: "users",
-          title: "ADMIN_C_PLAYERS",
-          desc: "ADMIN_C_PLAYERS_DESC",
-          fields: [
-            {
-              widget: "switch",
-              path: "showIds",
-              label: "ADMIN_F_IDS",
-              hint: "ADMIN_H_IDS",
-            },
-            {
-              widget: "switch",
-              path: "showNames",
-              label: "ADMIN_F_NAMES",
-              hint: "ADMIN_H_NAMES",
-            },
-          ],
-        },
-        {
-          icon: "briefcase",
-          title: "ADMIN_C_JOBS",
-          desc: "ADMIN_C_JOBS_DESC",
-          fields: [
-            {
-              widget: "list",
-              path: "jobs",
-              label: "ADMIN_F_JOBS",
-              addLabel: "ADMIN_ADD_JOB",
-              max: 12,
-              newRow: { job: "police", label: "Police" },
-              rows: [
-                {
-                  widget: "text",
-                  path: "job",
-                  label: "ADMIN_F_JOB",
-                  placeholder: "ADMIN_P_JOB",
-                },
-                {
-                  widget: "text",
-                  path: "label",
-                  label: "ADMIN_F_JOB_LABEL",
-                  placeholder: "ADMIN_P_JOB_LABEL",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-  ],
-};
+import type { CharacterInfo } from "@aicore-fivem/shared";
+import { EVENTS, readSettings, type Counts, type Row } from "common/board";
+import { schema } from "./schema";
 
 const panel = new AdminPanel(schema);
-/** Panel settings, parsed again after every change. */
-const content = { settings: readSettings(panel.get("settings")) };
-panel.onChange(
-  "settings",
-  () => (content.settings = readSettings(panel.get("settings"))),
-);
+const settings = panel.view("settings", readSettings);
+
+/**
+ * The player list as snapshot + deltas: a client subscribes once (its first open), gets the whole list as a latent
+ * event, then a `put` / `remove` per character load / unload. `seq` orders deltas against the snapshot. A settings
+ * change (ids or names shown) ends every subscription; clients drop their list on the same change and ask again.
+ */
+class Roster {
+  private readonly rows = new Map<number, Row>();
+  private readonly watchers = new PlayerMap<true>();
+  private nextKey = 0;
+  private seq = 0;
+
+  private row(source: number, character: CharacterInfo | null): Row {
+    const s = settings.value;
+    this.nextKey = this.nextKey >= 2_147_483_647 ? 1 : this.nextKey + 1;
+    return {
+      key: this.nextKey,
+      id: s.showIds ? source : 0,
+      name:
+        s.showNames && character
+          ? `${character.firstname} ${character.lastname}`
+          : "",
+    };
+  }
+
+  /** Builds every row again (start, settings change) and ends every subscription. */
+  reset(): void {
+    this.watchers.clear();
+    this.rows.clear();
+    for (const source of online.sources())
+      this.rows.set(source, this.row(source, online.character(source)));
+  }
+
+  subscribe(source: number): void {
+    this.watchers.set(source, true);
+    const s = settings.value;
+    const rows = s.showIds || s.showNames ? [...this.rows.values()] : [];
+    TriggerLatentClientEvent(EVENTS.roster, source, 50_000, this.seq, rows);
+  }
+
+  put(source: number, character: CharacterInfo): void {
+    this.remove(source);
+    const row = this.row(source, character);
+    this.rows.set(source, row);
+    this.send(EVENTS.put, row);
+  }
+
+  remove(source: number): void {
+    const row = this.rows.get(source);
+    if (!row) return;
+    this.rows.delete(source);
+    this.send(EVENTS.remove, row.key);
+  }
+
+  private send(event: string, payload: unknown): void {
+    const s = settings.value;
+    if (!s.showIds && !s.showNames) return;
+    this.seq++;
+    for (const watcher of this.watchers.keys())
+      emitNet(event, watcher, this.seq, payload);
+  }
+}
+
+const roster = new Roster();
+roster.reset();
+panel.onChange("settings", () => roster.reset());
+onCharacter({
+  loaded: (source, character) => roster.put(source, character),
+  unloaded: (source) => roster.remove(source),
+});
 
 onClientCallback(
   EVENTS.board,
-  (): Board => {
-    const s = content.settings;
-    const players =
-      s.showIds || s.showNames
-        ? [...online.sources()].map((id) => {
-            const c = s.showNames ? online.character(id) : null;
-            return {
-              id: s.showIds ? id : 0,
-              name: c ? `${c.firstname} ${c.lastname}` : "",
-            };
-          })
-        : [];
-    return {
-      online: GetNumPlayerIndices(),
-      max: GetConvarInt("sv_maxclients", 48),
-      jobs: s.jobs.map((j) => ({
-        label: j.label,
-        count: core.GetOnDutyCount(j.job),
-      })),
-      players,
-    };
-  },
+  (): Counts => ({
+    online: GetNumPlayerIndices(),
+    max: GetConvarInt("sv_maxclients", 48),
+    jobs: settings.value.jobs.map((j) => ({
+      label: j.label,
+      count: online.onDutyFor(j.job).size,
+    })),
+  }),
   { rate: { count: 2, windowMs: 2000 } },
+);
+
+onClientCallback(
+  EVENTS.subscribe,
+  (source) => {
+    roster.subscribe(source);
+    return { ok: true };
+  },
+  { rate: { count: 1, windowMs: 5000 } },
 );

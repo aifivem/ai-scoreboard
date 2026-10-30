@@ -3,9 +3,33 @@ import { bool, record, str } from "@aicore-fivem/lib/shared";
 /** ai-scoreboard's contracts and panel content. No natives. */
 
 export const EVENTS = {
-  /** Callback: () -> Board, what the scoreboard shows right now (asked when the key is pressed). */
+  /** Callback: () -> Counts, the numbers the scoreboard shows right now (asked when the key is pressed). */
   board: "ai-scoreboard:board",
+  /** Callback: () -> { ok } subscribes to the player list: a `roster` snapshot follows (latent), then `put` / `remove`. */
+  subscribe: "ai-scoreboard:subscribe",
+  /** Server -> subscriber (latent): (seq, rows: Row[]) the whole player list as of delta `seq`. */
+  roster: "ai-scoreboard:client:roster",
+  /** Server -> subscribers: (seq, row: Row) a player joined (or changed). */
+  put: "ai-scoreboard:client:put",
+  /** Server -> subscribers: (seq, key) a player left. */
+  remove: "ai-scoreboard:client:remove",
 } as const;
+
+/** One player row: `key` identifies the row, `id` is the shown server id (0 when ids are hidden). */
+export interface Row {
+  key: number;
+  id: number;
+  name: string;
+}
+
+export function toRow(v: unknown): Row | null {
+  const r = record(v);
+  return Number.isInteger(r.key) &&
+    Number.isInteger(r.id) &&
+    typeof r.name === "string"
+    ? { key: r.key as number, id: r.id as number, name: r.name }
+    : null;
+}
 
 export interface Settings {
   /** Show character names (otherwise only ids). */
@@ -17,10 +41,14 @@ export interface Settings {
   jobs: Array<{ job: string; label: string }>;
 }
 
-export interface Board {
+/** The numbers asked on each open (small; the player list comes as a snapshot plus deltas). */
+export interface Counts {
   online: number;
   max: number;
   jobs: Array<{ label: string; count: number }>;
+}
+
+export interface Board extends Counts {
   players: Array<{ id: number; name: string }>;
 }
 
