@@ -26,7 +26,7 @@ function toBoard(v: unknown): Board | null {
 /** Held key: asks the server once per press and shows the board until the key is released. No focus. */
 let held = false;
 new Keybind({
-  name: "scoreboard_open_HOME",
+  name: "scoreboard_open",
   description: Locale("KEYBIND_OPEN"),
   defaultKey: "HOME",
   onPressed: () => {
