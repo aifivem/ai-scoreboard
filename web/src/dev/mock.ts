@@ -1,7 +1,7 @@
-import en from "../../../locales/en.json"
+import en from "../../../locales/en.json";
 
 /** Browser preview only (`bun run webdev`): `?names=1` shows character names next to the ids. */
-const names = new URLSearchParams(window.location.search).get("names") !== null
+const names = new URLSearchParams(window.location.search).get("names") !== null;
 const NAMES = [
   "Jordan Hale",
   "Mia Torres",
@@ -11,7 +11,7 @@ const NAMES = [
   "Leo Park",
   "Nina Cruz",
   "Sam Reyes",
-]
+];
 export const MOCK_OPEN = {
   texts: en,
   board: {
@@ -28,4 +28,4 @@ export const MOCK_OPEN = {
       name: names ? (NAMES[i % NAMES.length] ?? "") : "",
     })),
   },
-}
+};

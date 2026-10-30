@@ -3,11 +3,11 @@ import {
   onClientCallback,
   online,
   resourceExport,
-} from "@aicore-fivem/lib/server"
-import type { PanelSchema } from "@aicore-fivem/shared"
-import { EVENTS, readSettings, type Board } from "common/board"
+} from "@aicore-fivem/lib/server";
+import type { PanelSchema } from "@aicore-fivem/shared";
+import { EVENTS, readSettings, type Board } from "common/board";
 
-const core = resourceExport("ai-core")
+const core = resourceExport("ai-core");
 
 /** ai-scoreboard's panel: what players may see about each other and which job counts show. */
 const schema: PanelSchema = {
@@ -98,30 +98,30 @@ const schema: PanelSchema = {
       ],
     },
   ],
-}
+};
 
-const panel = new AdminPanel(schema)
+const panel = new AdminPanel(schema);
 /** Panel settings, parsed again after every change. */
-const content = { settings: readSettings(panel.get("settings")) }
+const content = { settings: readSettings(panel.get("settings")) };
 panel.onChange(
   "settings",
-  () => (content.settings = readSettings(panel.get("settings")))
-)
+  () => (content.settings = readSettings(panel.get("settings"))),
+);
 
 onClientCallback(
   EVENTS.board,
   (): Board => {
-    const s = content.settings
+    const s = content.settings;
     const players =
       s.showIds || s.showNames
         ? [...online.sources()].map((id) => {
-            const c = s.showNames ? online.character(id) : null
+            const c = s.showNames ? online.character(id) : null;
             return {
               id: s.showIds ? id : 0,
               name: c ? `${c.firstname} ${c.lastname}` : "",
-            }
+            };
           })
-        : []
+        : [];
     return {
       online: GetNumPlayerIndices(),
       max: GetConvarInt("sv_maxclients", 48),
@@ -130,7 +130,7 @@ onClientCallback(
         count: core.GetOnDutyCount(j.job),
       })),
       players,
-    }
+    };
   },
-  { rate: { count: 2, windowMs: 2000 } }
-)
+  { rate: { count: 2, windowMs: 2000 } },
+);

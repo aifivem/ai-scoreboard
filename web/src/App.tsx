@@ -1,41 +1,41 @@
-import { useMemo, useState } from "react"
-import { useNuiEvent } from "fivem-nui-react"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faBriefcase } from "@fortawesome/free-solid-svg-icons"
-import type { Board, NuiMessage } from "../../resource/common/board"
-import { VirtualList } from "./components/VirtualList"
-import { MOCK_OPEN } from "./dev/mock"
-import { setTexts, useLang } from "./lib/lang"
-import { cn } from "./lib/utils"
+import { useMemo, useState } from "react";
+import { useNuiEvent } from "fivem-nui-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import type { Board, NuiMessage } from "../../resource/common/board";
+import { VirtualList } from "./components/VirtualList";
+import { MOCK_OPEN } from "./dev/mock";
+import { setTexts, useLang } from "./lib/lang";
+import { cn } from "./lib/utils";
 
-type OpenData = Extract<NuiMessage, { action: "open" }>["data"]
-const OPEN_MOCK = { mockData: MOCK_OPEN, mockDelay: 100 }
+type OpenData = Extract<NuiMessage, { action: "open" }>["data"];
+const OPEN_MOCK = { mockData: MOCK_OPEN, mockDelay: 100 };
 /** Player cells per list row. */
-const COLUMNS = 6
+const COLUMNS = 6;
 
 const toRows = (players: Board["players"]) => {
-  const rows: Board["players"][] = []
+  const rows: Board["players"][] = [];
   for (let i = 0; i < players.length; i += COLUMNS)
-    rows.push(players.slice(i, i + COLUMNS))
-  return rows
-}
+    rows.push(players.slice(i, i + COLUMNS));
+  return rows;
+};
 
 /** While the key is held (tgiann-esc look): title and online count, on-duty job cards, the player grid when the server allows it. */
 export function App() {
-  const t = useLang()
-  const [data, setData] = useState<OpenData | null>(null)
+  const t = useLang();
+  const [data, setData] = useState<OpenData | null>(null);
   useNuiEvent<OpenData>(
     "open",
     (d) => {
-      setTexts(d.texts)
-      setData(d)
+      setTexts(d.texts);
+      setData(d);
     },
-    OPEN_MOCK
-  )
-  useNuiEvent("close", () => setData(null))
-  const rows = useMemo(() => toRows(data?.board.players ?? []), [data])
-  if (!data) return null
-  const { board } = data
+    OPEN_MOCK,
+  );
+  useNuiEvent("close", () => setData(null));
+  const rows = useMemo(() => toRows(data?.board.players ?? []), [data]);
+  if (!data) return null;
+  const { board } = data;
   return (
     <div className="pointer-events-none fixed inset-0 animate-fade">
       <div
@@ -65,7 +65,7 @@ export function App() {
                 <span
                   className={cn(
                     "font-display text-[3.4vh] leading-none font-extrabold tabular-nums",
-                    j.count > 0 ? "text-white" : "text-text-3"
+                    j.count > 0 ? "text-white" : "text-text-3",
                   )}
                 >
                   {j.count}
@@ -107,5 +107,5 @@ export function App() {
         )}
       </div>
     </div>
-  )
+  );
 }
