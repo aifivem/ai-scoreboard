@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/aifivem/ai-scoreboard/compare/v0.1.1...v0.1.2) (2026-10-31)
+
+
+### Miscellaneous Chores
+
+* rebuild with the current lib ([a7a4379](https://github.com/aifivem/ai-scoreboard/commit/a7a4379393e11cc1639f4c3701a608ea9f408e6f))
+
 ## [0.1.1](https://github.com/aifivem/ai-scoreboard/compare/v0.1.0...v0.1.1) (2026-10-31)
 
 
