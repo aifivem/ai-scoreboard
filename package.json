@@ -7,7 +7,7 @@
   "author": {
     "name": "TGIANN"
   },
-  "repository": "github:TGIANN/ai-scoreboard",
+  "repository": "github:aifivem/ai-scoreboard",
   "type": "module",
   "fxDependencies": [
     "/onesync",
