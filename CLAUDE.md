@@ -16,4 +16,4 @@ HOME (hold, or press to open and close: panel "Key works by"): players online / 
 
 ## Entry points
 
-- Server (counts, roster) `resource/server/index.ts`; client key `resource/client/index.ts`; NUI `web/src/App.tsx` (tgiann-esc look; preview `bun run webdev`, `?names=1`).
+- Server (counts, roster) `resource/server/board/` (`roster.ts` the snapshot + delta list, `content.ts` the panel); client key and board `resource/client/board/` (`roster.ts` the local list); NUI `web/src/App.tsx` (tgiann-esc look; preview `bun run webdev`, `?names=1`).
