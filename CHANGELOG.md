@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/aifivem/ai-scoreboard/compare/v0.1.2...v0.1.3) (2026-11-01)
+
+
+### Code Refactoring
+
+* feature folders, side entries that only import, panel schema per tab ([0cabe78](https://github.com/aifivem/ai-scoreboard/commit/0cabe7899e61b5138c8e5bcbe3866a92a58e5ebe))
+
 ## [0.1.2](https://github.com/aifivem/ai-scoreboard/compare/v0.1.1...v0.1.2) (2026-10-31)
 
 
