@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.5](https://github.com/aifivem/ai-scoreboard/compare/v0.1.4...v0.1.5) (2026-11-02)
+
+
+### Documentation
+
+* install from the release zip ([c75a350](https://github.com/aifivem/ai-scoreboard/commit/c75a3503c09a09a7f1ff4e3c35d98c796a94e590))
+
+
+### Miscellaneous Chores
+
+* build files are no longer in git, the release zip carries them ([185752a](https://github.com/aifivem/ai-scoreboard/commit/185752a8bbd484f48004bdc631291bb1d98607a6))
+
 ## [0.1.4](https://github.com/aifivem/ai-scoreboard/compare/v0.1.3...v0.1.4) (2026-11-02)
 
 
