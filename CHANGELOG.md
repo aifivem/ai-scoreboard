@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.4](https://github.com/aifivem/ai-scoreboard/compare/v0.1.3...v0.1.4) (2026-11-02)
+
+
+### Bug Fixes
+
+* **build:** keep the web build in dist/ so release zips have the NUI ([0ff5a83](https://github.com/aifivem/ai-scoreboard/commit/0ff5a83b3f64147e34f0cdcbf613bf39646496ac))
+
+
+### Code Refactoring
+
+* import the shared packages from [@aifivem](https://github.com/aifivem) ([ba5b47f](https://github.com/aifivem/ai-scoreboard/commit/ba5b47f34afd47b0453ab8e628eaa7aa37eab864))
+
 ## [0.1.3](https://github.com/aifivem/ai-scoreboard/compare/v0.1.2...v0.1.3) (2026-11-01)
 
 
