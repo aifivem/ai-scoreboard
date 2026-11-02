@@ -1,4 +1,4 @@
-import { record } from "@aicore-fivem/lib/shared";
+import { record } from "@aifivem/lib/shared";
 import type { Counts } from "common/board";
 
 export function toCounts(v: unknown): Counts | null {

@@ -1,5 +1,5 @@
-import { every, online, PlayerMap } from "@aicore-fivem/lib/server";
-import type { CharacterInfo } from "@aicore-fivem/shared";
+import { every, online, PlayerMap } from "@aifivem/lib/server";
+import type { CharacterInfo } from "@aifivem/shared";
 import { EVENTS, type Row } from "common/board";
 import { settings } from "./content";
 

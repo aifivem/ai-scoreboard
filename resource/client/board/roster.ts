@@ -1,4 +1,4 @@
-import { triggerServerCallback } from "@aicore-fivem/lib/client";
+import { triggerServerCallback } from "@aifivem/lib/client";
 import { EVENTS, type Row } from "common/board";
 
 export type Delta = { seq: number; puts: Row[]; removes: number[] };

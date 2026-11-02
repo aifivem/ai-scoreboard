@@ -4,8 +4,8 @@ import {
   loadLocaleTexts,
   onServerEvent,
   triggerServerCallback,
-} from "@aicore-fivem/lib/client";
-import { readId } from "@aicore-fivem/lib/shared";
+} from "@aifivem/lib/client";
+import { readId } from "@aifivem/lib/shared";
 import { Locale } from "common";
 import {
   EVENTS,
@@ -15,7 +15,7 @@ import {
   type NuiMessage,
   type Row,
 } from "common/board";
-import { NUI_LAYER } from "@aicore-fivem/shared";
+import { NUI_LAYER } from "@aifivem/shared";
 import { toCounts } from "./parse";
 import { Roster } from "./roster";
 
